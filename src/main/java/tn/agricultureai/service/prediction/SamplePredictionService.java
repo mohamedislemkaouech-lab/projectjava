@@ -1,129 +1,78 @@
 package tn.agricultureai.service.prediction;
 
-import tn.agricultureai.domain.annotation.*;
 import tn.agricultureai.domain.model.*;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 
-/**
- * Sample service demonstrating annotation usage.
- * This is for demonstration purposes in Step 4.
- *
- * @author Your Name
- */
-@AIModel(
-        name = "TunisianExportPricePredictor",
-        version = "2.1",
-        framework = AIModel.Framework.ONNX,
-        accuracy = 0.87,
-        description = "Predicts export prices for Tunisian agricultural products",
-        productionReady = true,
-        trainedDate = "2024-12-01",
-        author = "Agriculture AI Team"
-)
-public class SamplePredictionService {
+public class SamplePredictionService implements PredictionService {
 
-    @Validated(
-            notNull = true,
-            min = 0.0,
-            max = 1.0,
-            message = "Confidence must be between 0.0 and 1.0"
-    )
-    private double confidenceThreshold = 0.75;
+    @Override
+    public String getModelName() {
+        return "Simple-Predictor-v1";
+    }
 
-    @Validated(
-            required = true,
-            notEmpty = true,
-            pattern = "^[A-Z0-9-]+$",
-            message = "Model ID must contain only uppercase letters, numbers, and hyphens"
-    )
-    private String modelId = "PRED-001";
+    @Override
+    public boolean isReady() {
+        return true;
+    }
 
-    @Validated(
-            min = 1,
-            max = 1000,
-            message = "Batch size must be between 1 and 1000"
-    )
-    private int batchSize = 100;
+    @Override
+    public ModelInfo getModelInfo() {
+        return new ModelInfo(
+                "Simple Prediction Model",
+                "1.0",
+                "Custom",
+                0.78,
+                true
+        );
+    }
 
-    /**
-     * Predict price with caching enabled
-     */
-    @Cacheable(
-            key = "prediction",
-            ttl = 1,
-            unit = TimeUnit.HOURS,
-            strategy = Cacheable.Strategy.LRU,
-            maxSize = 500,
-            condition = "result.isReliable()",
-            region = "predictions",
-            priority = Cacheable.Priority.HIGH
-    )
-    public PredictionResult predict(
-            @Validated(notNull = true) ProductType productType,
-            @Validated(notNull = true) Country destination
-    ) {
-        // Simulated prediction logic
+    @Override
+    public PredictionResult predict(ProductType productType, Country destination) {
+        if (productType == null || destination == null) {
+            throw new IllegalArgumentException("Arguments cannot be null");
+        }
+
         double basePrice = productType.getAveragePrice();
-        double randomFactor = 0.9 + (Math.random() * 0.2); // ±10%
-        double predictedPrice = basePrice * randomFactor;
+        double predictedPrice = basePrice * (0.9 + Math.random() * 0.2);
+        double confidence = 0.7 + (Math.random() * 0.2);
 
         return new PredictionResult(
                 productType,
                 destination,
                 predictedPrice,
-                0.85
+                confidence
         );
     }
 
-    /**
-     * Batch prediction with different cache settings
-     */
-    @Cacheable(
-            key = "batchPrediction",
-            ttl = 30,
-            unit = TimeUnit.MINUTES,
-            strategy = Cacheable.Strategy.LFU,
-            maxSize = 100,
-            region = "batch-predictions"
-    )
-    public java.util.List<PredictionResult> predictBatch(
-            @Validated(notEmpty = true) java.util.List<ProductType> products,
-            @Validated(notNull = true) Country destination
+    @Override
+    public List<PredictionResult> predictBatch(List<ProductType> productTypes, Country destination) {
+        List<PredictionResult> results = new ArrayList<>();
+        for (ProductType productType : productTypes) {
+            results.add(predict(productType, destination));
+        }
+        return results;
+    }
+
+    @Override
+    public PredictionResult predictWithContext(
+            ProductType productType,
+            Country destination,
+            List<ExportData> historicalData
     ) {
-        return products.stream()
-                .map(product -> predict(product, destination))
-                .toList();
-    }
+        if (historicalData == null || historicalData.isEmpty()) {
+            return predict(productType, destination);
+        }
 
-    /**
-     * Non-cached method for comparison
-     */
-    public PredictionResult predictRealtime(ProductType productType, Country destination) {
-        return predict(productType, destination);
-    }
+        double avgHistoricalPrice = historicalData.stream()
+                .mapToDouble(ExportData::pricePerUnit)
+                .average()
+                .orElse(productType.getAveragePrice());
 
-    // Getters and setters
-    public double getConfidenceThreshold() {
-        return confidenceThreshold;
-    }
-
-    public void setConfidenceThreshold(double confidenceThreshold) {
-        this.confidenceThreshold = confidenceThreshold;
-    }
-
-    public String getModelId() {
-        return modelId;
-    }
-
-    public void setModelId(String modelId) {
-        this.modelId = modelId;
-    }
-
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
+        return new PredictionResult(
+                productType,
+                destination,
+                avgHistoricalPrice * (0.95 + Math.random() * 0.1),
+                0.8
+        );
     }
 }

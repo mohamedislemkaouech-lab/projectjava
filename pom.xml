@@ -19,21 +19,22 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency Versions -->
-        <lombok.version>1.18.34</lombok.version>
+        <lombok.version>1.18.42</lombok.version>
         <djl.version>0.28.0</djl.version>
         <langchain4j.version>0.35.0</langchain4j.version>
         <onnxruntime.version>1.18.0</onnxruntime.version>
         <slf4j.version>2.0.9</slf4j.version>
     </properties>
 
-    <dependencies>
         <!-- Lombok for reducing boilerplate -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.34</version>  <!-- Latest as of Dec 2024 -->
-            <scope>provided</scope>
-        </dependency>
+        <dependencies>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.42</version> <!-- Use the latest version -->
+                <scope>provided</scope>
+            </dependency>
+
 
         <!-- DJL - Deep Java Library (AI/ML) -->
         <dependency>

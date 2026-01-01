@@ -17,7 +17,7 @@ public class ServiceFactory {
     private static final Logger log = Logger.getLogger(ServiceFactory.class.getName());
 
     // Singleton instances (lazy initialization)
-    private static PredictionService simplePredictionService;
+    private static SamplePredictionService simplePredictionService;
     private static PredictionService djlPredictionService;
     private static ReportGenerator reportGenerator;
 
@@ -62,10 +62,14 @@ public class ServiceFactory {
     /**
      * Get simple prediction service (singleton)
      */
-    public static synchronized PredictionService getSimplePredictionService() {
+    public static PredictionService getSimplePredictionService() {
         if (simplePredictionService == null) {
-            log.info("Creating SamplePredictionService instance");
-            simplePredictionService = new SamplePredictionService();
+            synchronized (ServiceFactory.class) {
+                if (simplePredictionService == null) {
+                    log.info("Creating SamplePredictionService instance");
+                    simplePredictionService = new SamplePredictionService();
+                }
+            }
         }
         return simplePredictionService;
     }
