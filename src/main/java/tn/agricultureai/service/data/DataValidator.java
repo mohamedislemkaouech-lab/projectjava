@@ -1,266 +1,545 @@
 package tn.agricultureai.service.data;
 
+import lombok.extern.slf4j.Slf4j;
 import tn.agricultureai.domain.exception.DataValidationException;
-import tn.agricultureai.domain.model.ExportData;
-import tn.agricultureai.domain.model.ProductType;
-import tn.agricultureai.domain.model.Country;
+import tn.agricultureai.domain.model.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
- * Validator for export data.
- * Demonstrates: Validation logic, business rules, error handling.
+ * Validator for export data and predictions.
+ * Demonstrates: Validation logic, functional interfaces, business rules.
  *
  * @author Your Name
  */
+@Slf4j
 public class DataValidator {
 
+    // Validation constants
+    private static final double MIN_PRICE = 0.01;
+    private static final double MAX_PRICE = 1000.0;
+    private static final double MIN_QUANTITY = 0.01;
+    private static final double MAX_QUANTITY = 10000.0;
+    private static final int MAX_DATE_FUTURE_DAYS = 0;
+    private static final int MAX_DATE_PAST_YEARS = 10;
+    private static final double PRICE_DEVIATION_THRESHOLD = 0.5; // 50%
+
     /**
-     * Validate export data according to business rules
-     *
-     * @param data the export data to validate
+     * Validate export data
      * @throws DataValidationException if validation fails
      */
     public void validate(ExportData data) {
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
-        // 1. Basic field validations
+        // Validate product type
         if (data.productType() == null) {
             errors.add(new DataValidationException.ValidationError(
-                    "productType", "Product type cannot be null"
+                    "productType",
+                    "Product type is required",
+                    null
             ));
         }
 
+        // Validate destination
         if (data.destination() == null) {
             errors.add(new DataValidationException.ValidationError(
-                    "destination", "Destination country cannot be null"
+                    "destination",
+                    "Destination country is required",
+                    null
             ));
         }
 
-        if (data.exportDate() == null) {
+        // Validate price
+        validatePrice(data.pricePerUnit(), errors);
+
+        // Validate quantity
+        validateQuantity(data.quantity(), errors);
+
+        // Validate date
+        validateExportDate(data.exportDate(), errors);
+
+        // Validate source
+        if (data.source() == null || data.source().isBlank()) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate", "Export date cannot be null"
+                    "source",
+                    "Data source must be specified",
+                    data.source()
             ));
         }
 
-        if (data.source() == null || data.source().trim().isEmpty()) {
+        // Business rule: Check price reasonability for product type
+        if (data.productType() != null && errors.isEmpty()) {
+            validatePriceReasonability(data, errors);
+        }
+
+        // Throw if errors found
+        if (!errors.isEmpty()) {
+            log.error("Validation failed with {} errors", errors.size());
+            throw new DataValidationException(errors);
+        }
+
+        log.debug("Validation successful for export data");
+    }
+
+    /**
+     * Validate price field
+     */
+    private void validatePrice(double pricePerUnit, List<DataValidationException.ValidationError> errors) {
+        if (pricePerUnit < MIN_PRICE) {
             errors.add(new DataValidationException.ValidationError(
-                    "source", "Source cannot be null or empty"
+                    "pricePerUnit",
+                    String.format("Price must be at least %.2f EUR/kg", MIN_PRICE),
+                    pricePerUnit
             ));
         }
 
-        // 2. Numeric validations
-        if (data.quantity() <= 0) {
+        if (pricePerUnit > MAX_PRICE) {
             errors.add(new DataValidationException.ValidationError(
-                    "quantity", String.format(
-                    "Quantity must be positive (got: %.2f)", data.quantity()
-            )
+                    "pricePerUnit",
+                    String.format("Price cannot exceed %.2f EUR/kg", MAX_PRICE),
+                    pricePerUnit
             ));
         }
 
-        if (data.pricePerUnit() <= 0) {
+        if (Double.isNaN(pricePerUnit) || Double.isInfinite(pricePerUnit)) {
             errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit", String.format(
-                    "Price per unit must be positive (got: %.2f)", data.pricePerUnit()
-            )
+                    "pricePerUnit",
+                    "Price must be a valid number",
+                    pricePerUnit
+            ));
+        }
+    }
+
+    /**
+     * Validate quantity field
+     */
+    private void validateQuantity(double quantity, List<DataValidationException.ValidationError> errors) {
+        if (quantity < MIN_QUANTITY) {
+            errors.add(new DataValidationException.ValidationError(
+                    "quantity",
+                    String.format("Quantity must be at least %.2f tons", MIN_QUANTITY),
+                    quantity
             ));
         }
 
-        if (data.pricePerUnit() > 1000000) {
+        if (quantity > MAX_QUANTITY) {
             errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit", String.format(
-                    "Price per unit exceeds maximum allowed (got: %.2f, max: 1,000,000)",
+                    "quantity",
+                    String.format("Quantity cannot exceed %.2f tons", MAX_QUANTITY),
+                    quantity
+            ));
+        }
+
+        if (Double.isNaN(quantity) || Double.isInfinite(quantity)) {
+            errors.add(new DataValidationException.ValidationError(
+                    "quantity",
+                    "Quantity must be a valid number",
+                    quantity
+            ));
+        }
+    }
+
+    /**
+     * Validate export date
+     */
+    private void validateExportDate(LocalDate exportDate, List<DataValidationException.ValidationError> errors) {
+        if (exportDate == null) {
+            errors.add(new DataValidationException.ValidationError(
+                    "exportDate",
+                    "Export date is required",
+                    null
+            ));
+            return;
+        }
+
+        LocalDate now = LocalDate.now();
+        LocalDate maxFuture = now.plusDays(MAX_DATE_FUTURE_DAYS);
+        LocalDate maxPast = now.minusYears(MAX_DATE_PAST_YEARS);
+
+        if (exportDate.isAfter(maxFuture)) {
+            errors.add(new DataValidationException.ValidationError(
+                    "exportDate",
+                    "Export date cannot be in the future",
+                    exportDate
+            ));
+        }
+
+        if (exportDate.isBefore(maxPast)) {
+            errors.add(new DataValidationException.ValidationError(
+                    "exportDate",
+                    String.format("Export date cannot be older than %d years", MAX_DATE_PAST_YEARS),
+                    exportDate
+            ));
+        }
+    }
+
+    /**
+     * Validate price reasonability for product type
+     */
+    private void validatePriceReasonability(
+            ExportData data,
+            List<DataValidationException.ValidationError> errors
+    ) {
+        double avgPrice = data.productType().getAveragePrice();
+        double deviation = Math.abs(data.pricePerUnit() - avgPrice) / avgPrice;
+
+        if (deviation > PRICE_DEVIATION_THRESHOLD) {
+            log.warn("Price {} for {} deviates significantly ({:.1f}%) from average {}",
+                    data.pricePerUnit(),
+                    data.productType(),
+                    deviation * 100,
+                    avgPrice);
+
+            // Add warning but don't fail validation
+            // You can uncomment to make it a hard error:
+            /*
+            errors.add(new DataValidationException.ValidationError(
+                    "pricePerUnit",
+                    String.format("Price deviates too much from average (%.2f EUR/kg)", avgPrice),
                     data.pricePerUnit()
-            )
             ));
+            */
+        }
+    }
+
+    /**
+     * Validate multiple records
+     */
+    public void validateBatch(List<ExportData> dataList) {
+        List<DataValidationException.ValidationError> allErrors = new ArrayList<>();
+
+        for (int i = 0; i < dataList.size(); i++) {
+            try {
+                validate(dataList.get(i));
+            } catch (DataValidationException e) {
+                // Add errors with record index
+                for (var error : e.getValidationErrors()) {
+                    allErrors.add(new DataValidationException.ValidationError(
+                            "record[" + i + "]." + error.field(),
+                            error.message(),
+                            error.rejectedValue()
+                    ));
+                }
+            }
         }
 
-        // 3. Business rule: Date cannot be in the future
-        if (data.exportDate() != null && data.exportDate().isAfter(LocalDate.now())) {
+        if (!allErrors.isEmpty()) {
+            throw new DataValidationException(allErrors);
+        }
+    }
+
+    /**
+     * Check if data passes a custom validation rule
+     */
+    public boolean validateCustomRule(ExportData data, Predicate<ExportData> rule) {
+        try {
+            return rule.test(data);
+        } catch (Exception e) {
+            log.error("Custom validation rule failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Validate prediction result
+     */
+    public void validatePrediction(PredictionResult prediction) {
+        List<DataValidationException.ValidationError> errors = new ArrayList<>();
+
+        // Validate product type
+        if (prediction.productType() == null) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate", String.format(
-                    "Export date cannot be in the future (got: %s)", data.exportDate()
-            )
+                    "productType",
+                    "Product type is required",
+                    null
             ));
         }
 
-        // 4. Business rule: Date cannot be too old (more than 10 years)
-        if (data.exportDate() != null &&
-                data.exportDate().isBefore(LocalDate.now().minusYears(10))) {
+        // Validate destination
+        if (prediction.destination() == null) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate", String.format(
-                    "Export date cannot be older than 10 years (got: %s)", data.exportDate()
-            )
+                    "destination",
+                    "Destination is required",
+                    null
             ));
         }
 
-        // 5. Business rule: Specific product-country restrictions
-        validateProductCountryRestrictions(data, errors);
-
-        // 6. Business rule: Minimum order value
-        double totalValue = data.getTotalValue();
-        if (totalValue < 100) {
+        // Validate predicted price
+        if (prediction.predictedPrice() <= 0) {
             errors.add(new DataValidationException.ValidationError(
-                    "totalValue", String.format(
-                    "Total export value must be at least 100 (got: %.2f)", totalValue
-            )
+                    "predictedPrice",
+                    "Predicted price must be positive",
+                    prediction.predictedPrice()
             ));
         }
 
-        // 7. Business rule: Maximum single shipment quantity
-        if (data.quantity() > 10000) {
+        if (prediction.predictedPrice() > MAX_PRICE) {
             errors.add(new DataValidationException.ValidationError(
-                    "quantity", String.format(
-                    "Single shipment quantity exceeds maximum (got: %.2f, max: 10,000)",
-                    data.quantity()
-            )
+                    "predictedPrice",
+                    String.format("Predicted price cannot exceed %.2f EUR/kg", MAX_PRICE),
+                    prediction.predictedPrice()
             ));
         }
 
-        // 8. Business rule: Validate source format
-        if (data.source() != null && !isValidSourceFormat(data.source())) {
+        // Validate confidence score
+        if (prediction.confidenceScore() < 0.0 || prediction.confidenceScore() > 1.0) {
             errors.add(new DataValidationException.ValidationError(
-                    "source", String.format(
-                    "Source must be in format 'REGION_CODE:FARM_ID' (got: %s)", data.source()
-            )
+                    "confidenceScore",
+                    "Confidence score must be between 0.0 and 1.0",
+                    prediction.confidenceScore()
             ));
         }
 
-        // If there are errors, throw exception
+        // Validate model name
+        if (prediction.modelName() == null || prediction.modelName().isBlank()) {
+            errors.add(new DataValidationException.ValidationError(
+                    "modelName",
+                    "Model name is required",
+                    prediction.modelName()
+            ));
+        }
+
+        // Throw if errors found
         if (!errors.isEmpty()) {
             throw new DataValidationException(errors);
         }
     }
 
     /**
-     * Validate product-country specific business rules
+     * Validate market report
      */
-    private void validateProductCountryRestrictions(
-            ExportData data,
-            List<DataValidationException.ValidationError> errors) {
+    public void validateReport(MarketReport report) {
+        List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
-        if (data.productType() == null || data.destination() == null) {
-            return; // Already handled in basic validations
+        // Validate title
+        if (report.title() == null || report.title().isBlank()) {
+            errors.add(new DataValidationException.ValidationError(
+                    "title",
+                    "Report title is required",
+                    report.title()
+            ));
         }
 
-        // Example business rules:
-        // 1. DAIRY products cannot be exported to countries without refrigeration standards
-        if (data.productType() == ProductType.DAIRY) {
-            List<Country> nonRefrigerationCountries = List.of(
-                    Country.SOMALIA, Country.YEMEN, Country.SUDAN
-            );
-            if (nonRefrigerationCountries.contains(data.destination())) {
-                errors.add(new DataValidationException.ValidationError(
-                        "destination", String.format(
-                        "DAIRY products cannot be exported to %s due to lack of refrigeration standards",
-                        data.destination()
-                )
-                ));
-            }
+        // Validate content
+        if (report.content() == null || report.content().isBlank()) {
+            errors.add(new DataValidationException.ValidationError(
+                    "content",
+                    "Report content is required",
+                    report.content()
+            ));
         }
 
-        // 2. GRAINS have quantity restrictions to certain destinations
-        if (data.productType() == ProductType.GRAINS) {
-            List<Country> restrictedGrainDestinations = List.of(
-                    Country.NORTH_KOREA, Country.IRAN, Country.SYRIA
-            );
-            if (restrictedGrainDestinations.contains(data.destination()) && data.quantity() > 1000) {
-                errors.add(new DataValidationException.ValidationError(
-                        "quantity", String.format(
-                        "GRAINS export to %s cannot exceed 1000 units (got: %.2f)",
-                        data.destination(), data.quantity()
-                )
-                ));
-            }
+        // Validate content length (minimum)
+        if (report.content() != null && report.content().length() < 50) {
+            errors.add(new DataValidationException.ValidationError(
+                    "content",
+                    "Report content must be at least 50 characters",
+                    report.content().length()
+            ));
         }
 
-        // 3. FRUITS require phytosanitary certificates for certain destinations
-        if (data.productType() == ProductType.FRUITS || data.productType() == ProductType.VEGETABLES) {
-            List<Country> phytosanitaryCountries = List.of(
-                    Country.USA, Country.CANADA, Country.JAPAN, Country.AUSTRALIA
-            );
-            if (phytosanitaryCountries.contains(data.destination())) {
-                // In a real system, we would check for certificate in the data
-                // For now, this is just an example rule structure
-            }
+        // Validate report type
+        if (report.reportType() == null) {
+            errors.add(new DataValidationException.ValidationError(
+                    "reportType",
+                    "Report type is required",
+                    null
+            ));
+        }
+
+        // Validate predictions list
+        if (report.predictions() == null) {
+            errors.add(new DataValidationException.ValidationError(
+                    "predictions",
+                    "Predictions list cannot be null",
+                    null
+            ));
+        }
+
+        // Throw if errors found
+        if (!errors.isEmpty()) {
+            throw new DataValidationException(errors);
         }
     }
 
     /**
-     * Validate source format
-     * Expected format: "REGION_CODE:FARM_ID"
-     * Example: "EU:FR-12345" or "NA:US-CA-789"
+     * Quick validation - returns boolean instead of throwing
      */
-    private boolean isValidSourceFormat(String source) {
-        if (source == null || source.trim().isEmpty()) {
-            return false;
-        }
-
-        // Split by colon
-        String[] parts = source.split(":");
-        if (parts.length != 2) {
-            return false;
-        }
-
-        String regionCode = parts[0].trim();
-        String farmId = parts[1].trim();
-
-        // Validate region code (2-3 characters, uppercase)
-        if (!regionCode.matches("^[A-Z]{2,3}$")) {
-            return false;
-        }
-
-        // Validate farm ID (alphanumeric with optional hyphens)
-        if (!farmId.matches("^[A-Z0-9\\-]{3,20}$")) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Quick validation for bulk operations (only basic checks)
-     * Returns true if data passes basic validation, false otherwise
-     */
-    public boolean quickValidate(ExportData data) {
+    public boolean isValid(ExportData data) {
         try {
-            // Only check the most critical validations
-            if (data.productType() == null) return false;
-            if (data.destination() == null) return false;
-            if (data.exportDate() == null) return false;
-            if (data.quantity() <= 0) return false;
-            if (data.pricePerUnit() <= 0) return false;
-            if (data.exportDate().isAfter(LocalDate.now())) return false;
-
+            validate(data);
             return true;
-        } catch (Exception e) {
+        } catch (DataValidationException e) {
             return false;
         }
     }
 
     /**
-     * Validate a batch of export data records
-     * Returns list of errors for each invalid record
+     * Quick validation for prediction
      */
-    public List<DataValidationException.ValidationError> validateBatch(List<ExportData> dataList) {
-        List<DataValidationException.ValidationError> allErrors = new ArrayList<>();
+    public boolean isValidPrediction(PredictionResult prediction) {
+        try {
+            validatePrediction(prediction);
+            return true;
+        } catch (DataValidationException e) {
+            return false;
+        }
+    }
 
-        for (int i = 0; i < dataList.size(); i++) {
-            ExportData data = dataList.get(i);
-            try {
-                validate(data);
-            } catch (DataValidationException e) {
-                // Add index information to errors
-                for (DataValidationException.ValidationError error : e.getValidationErrors()) {
-                    allErrors.add(new DataValidationException.ValidationError(
-                            String.format("record[%d].%s", i, error.field()),
-                            String.format("[Record %d] %s", i, error.message())
-                    ));
-                }
+    /**
+     * Get validation errors without throwing
+     */
+    public List<String> getValidationErrors(ExportData data) {
+        try {
+            validate(data);
+            return Collections.emptyList();
+        } catch (DataValidationException e) {
+            return e.getValidationErrors().stream()
+                    .map(error -> error.field() + ": " + error.message())
+                    .toList();
+        }
+    }
+
+    /**
+     * Validate with custom business rules
+     */
+    public void validateWithRules(
+            ExportData data,
+            List<ValidationRule> customRules
+    ) {
+        // First, run standard validation
+        validate(data);
+
+        // Then apply custom rules
+        List<DataValidationException.ValidationError> errors = new ArrayList<>();
+
+        for (ValidationRule rule : customRules) {
+            if (!rule.test(data)) {
+                errors.add(new DataValidationException.ValidationError(
+                        rule.fieldName(),
+                        rule.errorMessage(),
+                        rule.extractValue(data)
+                ));
             }
         }
 
-        return allErrors;
+        if (!errors.isEmpty()) {
+            throw new DataValidationException(errors);
+        }
+    }
+
+    /**
+     * Functional interface for custom validation rules
+     */
+    @FunctionalInterface
+    public interface ValidationRule {
+        boolean test(ExportData data);
+
+        default String fieldName() {
+            return "custom";
+        }
+
+        default String errorMessage() {
+            return "Custom validation failed";
+        }
+
+        default Object extractValue(ExportData data) {
+            return null;
+        }
+    }
+
+    /**
+     * Pre-defined validation rules
+     */
+    public static class ValidationRules {
+
+        /**
+         * Rule: EU exports must be above minimum price
+         */
+        public static ValidationRule euMinimumPrice(double minPrice) {
+            return new ValidationRule() {
+                @Override
+                public boolean test(ExportData data) {
+                    if (!data.isEuExport()) {
+                        return true; // Rule doesn't apply
+                    }
+                    return data.pricePerUnit() >= minPrice;
+                }
+
+                @Override
+                public String fieldName() {
+                    return "pricePerUnit";
+                }
+
+                @Override
+                public String errorMessage() {
+                    return String.format("EU exports must have price >= %.2f EUR/kg", minPrice);
+                }
+
+                @Override
+                public Object extractValue(ExportData data) {
+                    return data.pricePerUnit();
+                }
+            };
+        }
+
+        /**
+         * Rule: High-value products must have minimum quantity
+         */
+        public static ValidationRule highValueMinimumQuantity(double minQuantity) {
+            return new ValidationRule() {
+                @Override
+                public boolean test(ExportData data) {
+                    if (!data.productType().isHighValue()) {
+                        return true;
+                    }
+                    return data.quantity() >= minQuantity;
+                }
+
+                @Override
+                public String fieldName() {
+                    return "quantity";
+                }
+
+                @Override
+                public String errorMessage() {
+                    return String.format("High-value products require minimum %.2f tons", minQuantity);
+                }
+
+                @Override
+                public Object extractValue(ExportData data) {
+                    return data.quantity();
+                }
+            };
+        }
+
+        /**
+         * Rule: Recent exports only (within last N days)
+         */
+        public static ValidationRule recentExportsOnly(int maxDaysOld) {
+            return new ValidationRule() {
+                @Override
+                public boolean test(ExportData data) {
+                    LocalDate cutoff = LocalDate.now().minusDays(maxDaysOld);
+                    return !data.exportDate().isBefore(cutoff);
+                }
+
+                @Override
+                public String fieldName() {
+                    return "exportDate";
+                }
+
+                @Override
+                public String errorMessage() {
+                    return String.format("Export must be within last %d days", maxDaysOld);
+                }
+
+                @Override
+                public Object extractValue(ExportData data) {
+                    return data.exportDate();
+                }
+            };
+        }
     }
 }

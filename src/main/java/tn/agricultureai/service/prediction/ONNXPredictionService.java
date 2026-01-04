@@ -100,12 +100,12 @@ public class ONNXPredictionService extends AbstractPredictionService {
     }
 
     @Override
-    protected String getFrameworkName() {
+    public String getFrameworkName() {
         return "ONNX Runtime";
     }
 
     @Override
-    protected double getModelAccuracy() {
+    public double getModelAccuracy() {
         return 0.85;
     }
 

@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
  *
  * @author Your Name
  */
-@Slf4j  // Lombok: Auto-generates logger
-@Getter // Lombok: Auto-generates getters
+@Slf4j
+@Getter
 public abstract class AbstractPredictionService implements PredictionService {
 
     protected final String modelName;
@@ -32,7 +32,6 @@ public abstract class AbstractPredictionService implements PredictionService {
 
     /**
      * Initialize the model (called by subclasses)
-     * Template method pattern
      */
     protected void initialize() {
         log.info("Initializing prediction service: {}", modelName);
@@ -68,6 +67,16 @@ public abstract class AbstractPredictionService implements PredictionService {
             Country destination,
             List<ExportData> context
     );
+
+    /**
+     * Abstract method - get framework name (NOW PUBLIC)
+     */
+    public abstract String getFrameworkName();
+
+    /**
+     * Abstract method - get model accuracy (NOW PUBLIC)
+     */
+    public abstract double getModelAccuracy();
 
     @Override
     public PredictionResult predict(ProductType productType, Country destination) {
@@ -165,16 +174,6 @@ public abstract class AbstractPredictionService implements PredictionService {
                 ready
         );
     }
-
-    /**
-     * Get framework name (implemented by subclasses)
-     */
-    protected abstract String getFrameworkName();
-
-    /**
-     * Get model accuracy (implemented by subclasses)
-     */
-    protected abstract double getModelAccuracy();
 
     /**
      * Validate model is ready

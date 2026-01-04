@@ -19,22 +19,24 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency Versions -->
-        <lombok.version>1.18.42</lombok.version>
+        <lombok.version>1.18.34</lombok.version>
         <djl.version>0.28.0</djl.version>
         <langchain4j.version>0.35.0</langchain4j.version>
         <onnxruntime.version>1.18.0</onnxruntime.version>
         <slf4j.version>2.0.9</slf4j.version>
+        <!-- FIXED: Use stable DL4J version -->
+        <deeplearning4j.version>1.0.0-M2.1</deeplearning4j.version>
+        <nd4j.version>1.0.0-M2.1</nd4j.version>
     </properties>
 
+    <dependencies>
         <!-- Lombok for reducing boilerplate -->
-        <dependencies>
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.42</version> <!-- Use the latest version -->
-                <scope>provided</scope>
-            </dependency>
-
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- DJL - Deep Java Library (AI/ML) -->
         <dependency>
@@ -47,24 +49,26 @@
             <artifactId>basicdataset</artifactId>
             <version>${djl.version}</version>
         </dependency>
-        <!-- DJL PyTorch Engine (lightweight for exam) -->
-        <dependency>
-            <groupId>ai.djl.pytorch</groupId>
-            <artifactId>pytorch-engine</artifactId>
-            <version>${djl.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>ai.djl.pytorch</groupId>
-            <artifactId>pytorch-model-zoo</artifactId>
-            <version>${djl.version}</version>
-        </dependency>
 
-        <!-- ONNX Runtime (Alternative to DJL) -->
+        <!-- ONNX Runtime -->
         <dependency>
             <groupId>com.microsoft.onnxruntime</groupId>
             <artifactId>onnxruntime</artifactId>
             <version>${onnxruntime.version}</version>
+        </dependency>
+
+        <!-- DeepLearning4J - REAL AI MODEL (FIXED VERSION) -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>${deeplearning4j.version}</version>
+        </dependency>
+
+        <!-- ND4J Native Backend (CPU) -->
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>${nd4j.version}</version>
         </dependency>
 
         <!-- LangChain4j for LLM Integration -->
@@ -78,7 +82,6 @@
             <artifactId>langchain4j-open-ai</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
-        <!-- Alternative: Local Ollama -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-ollama</artifactId>
@@ -97,12 +100,19 @@
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- JUnit for testing (optional but good for exam) -->
+        <!-- JUnit for testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.1</version>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Apache Commons Math for ML utilities -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
         </dependency>
     </dependencies>
 
