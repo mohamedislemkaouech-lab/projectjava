@@ -2,6 +2,7 @@ package tn.agricultureai;
 
 import tn.agricultureai.domain.model.*;
 import tn.agricultureai.service.factory.ServiceFactory;
+import tn.agricultureai.service.prediction.DL4JPredictionService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
@@ -25,8 +26,8 @@ public class RealAIDemo {
             System.out.println("\n📦 Step 1: Creating Real Neural Network...");
             DL4JPredictionService realAI = ServiceFactory.getDL4JPredictionService();
 
-            // Print model information
-            System.out.println(realAI.getModelInfo());
+            // Print model information (using the NEW method name)
+            System.out.println(realAI.getDetailedModelInfo());
 
             // Prepare test data
             System.out.println("📊 Step 2: Preparing Test Data...\n");

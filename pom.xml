@@ -3,10 +3,11 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>tn.agricultureai</groupId>
-    <artifactId>tunisian-export-intelligence</artifactId>
+    <artifactId>tunisian-export-ai</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -14,8 +15,9 @@
     <description>OOP Exam Project - AI-Powered Market Prediction System</description>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <!-- Updated for Java 25 -->
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependency Versions -->
@@ -24,13 +26,13 @@
         <langchain4j.version>0.35.0</langchain4j.version>
         <onnxruntime.version>1.18.0</onnxruntime.version>
         <slf4j.version>2.0.9</slf4j.version>
-        <!-- FIXED: Use stable DL4J version -->
         <deeplearning4j.version>1.0.0-M2.1</deeplearning4j.version>
         <nd4j.version>1.0.0-M2.1</nd4j.version>
+        <junit.version>5.10.1</junit.version>
     </properties>
 
     <dependencies>
-        <!-- Lombok for reducing boilerplate -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -38,11 +40,41 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- DJL - Deep Java Library (AI/ML) -->
+        <!-- DeepLearning4J -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>${deeplearning4j.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- ND4J -->
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>${nd4j.version}</version>
+        </dependency>
+
+        <!-- DJL -->
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>
             <version>${djl.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>ai.djl</groupId>
@@ -57,21 +89,7 @@
             <version>${onnxruntime.version}</version>
         </dependency>
 
-        <!-- DeepLearning4J - REAL AI MODEL (FIXED VERSION) -->
-        <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-core</artifactId>
-            <version>${deeplearning4j.version}</version>
-        </dependency>
-
-        <!-- ND4J Native Backend (CPU) -->
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-native-platform</artifactId>
-            <version>${nd4j.version}</version>
-        </dependency>
-
-        <!-- LangChain4j for LLM Integration -->
+        <!-- LangChain4j -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
@@ -79,12 +97,12 @@
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai</artifactId>
+            <artifactId>langchain4j-ollama</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-ollama</artifactId>
+            <artifactId>langchain4j-open-ai</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
 
@@ -100,32 +118,38 @@
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- JUnit for testing -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.10.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Apache Commons Math for ML utilities -->
+        <!-- Apache Commons Math -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>3.6.1</version>
         </dependency>
+
+        <!-- JUnit -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Maven Compiler Plugin -->
+            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>25</source>
+                    <target>25</target>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <!-- Open modules if some libraries fail due to internal APIs -->
+                        <arg>--add-opens</arg>
+                        <arg>java.base/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -136,7 +160,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven Exec Plugin for running Main -->
+            <!-- Exec Plugin -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -144,6 +168,28 @@
                 <configuration>
                     <mainClass>tn.agricultureai.Main</mainClass>
                 </configuration>
+            </plugin>
+
+            <!-- Jar Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>tn.agricultureai.Main</mainClass>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- Surefire Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0</version>
             </plugin>
         </plugins>
     </build>

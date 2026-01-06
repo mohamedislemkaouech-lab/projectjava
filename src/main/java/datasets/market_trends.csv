@@ -1,0 +1,4 @@
+date,product_type,market_indicator,demand_level,supply_level,competitor_price_avg
+2020-01-15,OLIVE_OIL,RISING,HIGH,MEDIUM,3150.00
+2020-01-20,DATES,STABLE,MEDIUM,HIGH,2150.00
+2020-02-10,CITRUS_FRUITS,FALLING,MEDIUM,HIGH,1400.00

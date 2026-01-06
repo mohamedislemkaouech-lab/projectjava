@@ -278,9 +278,10 @@ public class DL4JPredictionService extends AbstractPredictionService {
     }
 
     /**
-     * Get model information
+     * Get detailed model information as String (renamed to avoid clash)
+     * This is a separate method from the inherited getModelInfo()
      */
-    public String getModelInfo() {
+    public String getDetailedModelInfo() {
         StringBuilder info = new StringBuilder();
         info.append("═══════════════════════════════════════════════\n");
         info.append("  REAL NEURAL NETWORK MODEL INFORMATION\n");
@@ -314,7 +315,7 @@ public class DL4JPredictionService extends AbstractPredictionService {
      * Print model summary
      */
     public void printModelSummary() {
-        System.out.println(getModelInfo());
+        System.out.println(getDetailedModelInfo());
         System.out.println("Layer Configuration:");
         System.out.println(model.getLayerWiseConfigurations().toJson());
     }
