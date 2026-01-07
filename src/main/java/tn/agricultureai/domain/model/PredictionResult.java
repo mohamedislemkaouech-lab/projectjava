@@ -97,7 +97,7 @@ public record PredictionResult(
     public String getSummary() {
         return String.format(
                 "%s to %s: %.2f EUR/kg (Confidence: %s, Deviation: %+.1f%%)",
-                productType.getDisplayName(),
+                productType.getFrenchName(),  // CHANGED: getDisplayName() to getFrenchName()
                 destination.getName(),
                 predictedPrice,
                 confidenceLevel.getLabel(),
@@ -110,10 +110,10 @@ public record PredictionResult(
      */
     public double calculateError(ExportData actualData) {
         if (!actualData.productType().equals(this.productType) ||
-                !actualData.destination().equals(this.destination)) {
+                !actualData.destinationCountry().equals(this.destination.getName())) {  // CHANGED
             throw new IllegalArgumentException("Data mismatch: different product or destination");
         }
 
-        return Math.abs(predictedPrice - actualData.pricePerUnit());
+        return Math.abs(predictedPrice - actualData.pricePerTon());  // CHANGED: pricePerUnit to pricePerTon
     }
 }

@@ -9,12 +9,6 @@ import tn.agricultureai.service.prediction.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Dashboard controller - handles user interactions and business logic.
- * Demonstrates: MVC Controller, Observer pattern integration.
- *
- * @author Your Name
- */
 public class DashboardController {
 
     private final DashboardModel model;
@@ -28,14 +22,10 @@ public class DashboardController {
         this.scanner = new Scanner(System.in);
         this.observers = new ArrayList<>();
 
-        // Initialize services
         model.setActivePredictionService(ServiceFactory.getDefaultPredictionService());
         model.setActiveReportGenerator(ServiceFactory.getReportGenerator());
     }
 
-    /**
-     * Start the dashboard application
-     */
     public void start() {
         boolean running = true;
 
@@ -44,7 +34,7 @@ public class DashboardController {
 
             try {
                 int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
 
                 switch (choice) {
                     case 1 -> viewStatistics();
@@ -66,7 +56,7 @@ public class DashboardController {
 
             } catch (InputMismatchException e) {
                 view.displayError("Invalid input. Please enter a number.");
-                scanner.nextLine(); // Clear invalid input
+                scanner.nextLine();
                 view.pause();
             } catch (Exception e) {
                 view.displayError("An error occurred: " + e.getMessage());
@@ -75,9 +65,6 @@ public class DashboardController {
         }
     }
 
-    /**
-     * View statistics
-     */
     private void viewStatistics() {
         DashboardModel.DashboardStatistics stats = model.getStatistics();
         view.displayStatistics(stats);
@@ -85,12 +72,8 @@ public class DashboardController {
                 "Statistics refreshed", stats);
     }
 
-    /**
-     * Generate predictions
-     */
     private void generatePredictions() {
         try {
-            // Select product
             view.displayProductMenu();
             int productChoice = scanner.nextInt();
             scanner.nextLine();
@@ -102,7 +85,6 @@ public class DashboardController {
 
             ProductType product = ProductType.values()[productChoice - 1];
 
-            // Select country
             view.displayCountryMenu();
             int countryChoice = scanner.nextInt();
             scanner.nextLine();
@@ -114,7 +96,6 @@ public class DashboardController {
 
             Country country = Country.values()[countryChoice - 1];
 
-            // Generate prediction
             view.displayInfo("Generating prediction...");
             PredictionResult prediction = model.getActivePredictionService()
                     .predict(product, country);
@@ -134,30 +115,25 @@ public class DashboardController {
         }
     }
 
-    /**
-     * View export data
-     */
     private void viewExportData() {
         List<ExportData> exports = model.getExportRepository().findAll();
         view.displayExports(exports, 20);
     }
 
-    /**
-     * Generate market report
-     */
     private void generateReport() {
         try {
             if (model.getCurrentPredictions().isEmpty()) {
                 view.displayInfo("No predictions available. Generating sample predictions...");
 
-                // Generate some predictions
                 List<PredictionResult> predictions = new ArrayList<>();
                 predictions.add(model.getActivePredictionService()
                         .predict(ProductType.OLIVE_OIL, Country.ITALY));
                 predictions.add(model.getActivePredictionService()
                         .predict(ProductType.DATES, Country.FRANCE));
+
+                // FIXED LINE 160: CITRUS_FRUITS not CITRUS
                 predictions.add(model.getActivePredictionService()
-                        .predict(ProductType.CITRUS, Country.GERMANY));
+                        .predict(ProductType.CITRUS_FRUITS, Country.GERMANY));
 
                 model.setCurrentPredictions(predictions);
             }
@@ -185,11 +161,7 @@ public class DashboardController {
         }
     }
 
-    /**
-     * Display charts
-     */
     private void displayCharts() {
-        // Select chart type
         view.displayChartTypeMenu();
         int chartChoice = scanner.nextInt();
         scanner.nextLine();
@@ -210,7 +182,6 @@ public class DashboardController {
 
         view.setChartStrategy(strategy);
 
-        // Get data for chart
         Map<String, Double> data = model.getExportRepository()
                 .getTotalValueByProduct()
                 .entrySet()
@@ -225,9 +196,6 @@ public class DashboardController {
         view.displayChart("Total Export Value by Product", data);
     }
 
-    /**
-     * Search and filter
-     */
     private void searchAndFilter() {
         System.out.println("\n🔍 SEARCH & FILTER");
         System.out.println("  1. Filter by Product");
@@ -271,23 +239,14 @@ public class DashboardController {
         }
     }
 
-    /**
-     * Add observer
-     */
     public void addObserver(DashboardObserver observer) {
         observers.add(observer);
     }
 
-    /**
-     * Remove observer
-     */
     public void removeObserver(DashboardObserver observer) {
         observers.remove(observer);
     }
 
-    /**
-     * Notify all observers
-     */
     private void notifyObservers(
             DashboardObserver.UpdateEvent.EventType type,
             String message,

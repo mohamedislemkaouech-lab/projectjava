@@ -9,12 +9,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Service for managing export data operations.
- * Demonstrates: Business logic layer, service pattern, transaction-like operations.
- *
- * @author Your Name
- */
 @Slf4j
 @RequiredArgsConstructor
 public class ExportDataService {
@@ -22,42 +16,32 @@ public class ExportDataService {
     private final ExportDataRepository repository;
     private final DataValidator validator;
 
-    /**
-     * Create new export record with validation
-     */
     public ExportData createExport(
             ProductType productType,
-            Country destination,
-            double quantity,
-            double pricePerUnit,
-            LocalDate exportDate,
-            String source
+            String destinationCountry,
+            double volume,
+            double pricePerTon,
+            LocalDate date,
+            MarketIndicator indicator
     ) {
-        log.info("Creating export: {} to {}", productType, destination);
+        log.info("Creating export: {} to {}", productType, destinationCountry);
 
-        // Create export data
         ExportData export = new ExportData(
+                date,
                 productType,
-                destination,
-                quantity,
-                pricePerUnit,
-                exportDate,
-                source
+                pricePerTon,
+                volume,
+                destinationCountry,
+                indicator
         );
 
-        // Validate
         validator.validate(export);
-
-        // Save
         ExportData saved = repository.save(export);
-        log.info("Export created with ID: {}", saved.id());
-
+        log.info("Export created: {} to {} on {}",
+                productType, destinationCountry, date);
         return saved;
     }
 
-    /**
-     * Import bulk export data from external source
-     */
     public BulkImportResult importBulkData(List<ExportData> exportList) {
         log.info("Starting bulk import of {} records", exportList.size());
 
@@ -92,28 +76,18 @@ public class ExportDataService {
         );
     }
 
-    /**
-     * Update existing export record
-     */
     public ExportData updateExport(String exportId, ExportData updatedData) {
         log.info("Updating export: {}", exportId);
 
-        // Check if exists
         Optional<ExportData> existing = repository.findById(exportId);
         if (existing.isEmpty()) {
             throw new IllegalArgumentException("Export not found: " + exportId);
         }
 
-        // Validate updated data
         validator.validate(updatedData);
-
-        // Save (creates new record with same ID)
         return repository.save(updatedData);
     }
 
-    /**
-     * Delete export record
-     */
     public boolean deleteExport(String exportId) {
         log.info("Deleting export: {}", exportId);
         boolean deleted = repository.deleteById(exportId);
@@ -127,56 +101,37 @@ public class ExportDataService {
         return deleted;
     }
 
-    /**
-     * Get export by ID
-     */
     public Optional<ExportData> getExportById(String exportId) {
         return repository.findById(exportId);
     }
 
-    /**
-     * Get all exports for a product
-     */
     public List<ExportData> getExportsByProduct(ProductType productType) {
         log.debug("Finding exports for product: {}", productType);
         return repository.findByProductType(productType);
     }
 
-    /**
-     * Get all exports to a destination
-     */
-    public List<ExportData> getExportsByDestination(Country destination) {
-        log.debug("Finding exports to: {}", destination);
-        return repository.findByDestination(destination);
+    public List<ExportData> getExportsByDestination(String countryName) {
+        log.debug("Finding exports to: {}", countryName);
+        return repository.findAll().stream()
+                .filter(export -> export.destinationCountry().equals(countryName))
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Get exports within date range
-     */
     public List<ExportData> getExportsByDateRange(LocalDate fromDate, LocalDate toDate) {
         log.debug("Finding exports from {} to {}", fromDate, toDate);
         return repository.findByDateRange(fromDate, toDate);
     }
 
-    /**
-     * Get recent exports (last N days)
-     */
     public List<ExportData> getRecentExports(int days) {
         log.debug("Finding exports from last {} days", days);
         return repository.findRecent(days);
     }
 
-    /**
-     * Get EU exports only
-     */
     public List<ExportData> getEuExports() {
         log.debug("Finding EU exports");
         return repository.findEuExports();
     }
 
-    /**
-     * Calculate statistics for a product
-     */
     public ProductStatistics calculateProductStatistics(ProductType productType) {
         log.debug("Calculating statistics for: {}", productType);
 
@@ -189,20 +144,20 @@ public class ExportDataService {
         }
 
         DoubleSummaryStatistics priceStats = exports.stream()
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)
                 .summaryStatistics();
 
         double totalQuantity = exports.stream()
-                .mapToDouble(ExportData::quantity)
+                .mapToDouble(ExportData::volume)
                 .sum();
 
         double totalValue = exports.stream()
                 .mapToDouble(ExportData::getTotalValue)
                 .sum();
 
-        Map<Country, Long> destinations = exports.stream()
+        Map<String, Long> destinations = exports.stream()
                 .collect(Collectors.groupingBy(
-                        ExportData::destination,
+                        ExportData::destinationCountry,
                         Collectors.counting()
                 ));
 
@@ -218,13 +173,12 @@ public class ExportDataService {
         );
     }
 
-    /**
-     * Calculate statistics for a destination
-     */
-    public DestinationStatistics calculateDestinationStatistics(Country destination) {
+    public DestinationStatistics calculateDestinationStatistics(String destination) {
         log.debug("Calculating statistics for: {}", destination);
 
-        List<ExportData> exports = repository.findByDestination(destination);
+        List<ExportData> exports = repository.findAll().stream()
+                .filter(export -> export.destinationCountry().equals(destination))
+                .collect(Collectors.toList());
 
         if (exports.isEmpty()) {
             return new DestinationStatistics(
@@ -233,7 +187,7 @@ public class ExportDataService {
         }
 
         DoubleSummaryStatistics priceStats = exports.stream()
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)
                 .summaryStatistics();
 
         double totalValue = exports.stream()
@@ -255,9 +209,6 @@ public class ExportDataService {
         );
     }
 
-    /**
-     * Get top products by export value
-     */
     public List<ProductValueSummary> getTopProductsByValue(int limit) {
         log.debug("Finding top {} products by value", limit);
 
@@ -269,33 +220,29 @@ public class ExportDataService {
                 .map(entry -> new ProductValueSummary(
                         entry.getKey(),
                         entry.getValue(),
-                        repository.findByProductType(entry.getKey()).size()
+                        (int) repository.findByProductType(entry.getKey()).size()  // FIXED LINE 243: cast to int
                 ))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get top destinations by export value
-     */
     public List<DestinationValueSummary> getTopDestinationsByValue(int limit) {
         log.debug("Finding top {} destinations by value", limit);
 
-        Map<Country, Double> valueByDestination = repository.getTotalValueByDestination();
+        Map<String, Double> valueByDestination = repository.getTotalValueByDestination();
 
         return valueByDestination.entrySet().stream()
-                .sorted(Map.Entry.<Country, Double>comparingByValue().reversed())
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                 .limit(limit)
                 .map(entry -> new DestinationValueSummary(
                         entry.getKey(),
                         entry.getValue(),
-                        repository.findByDestination(entry.getKey()).size()
+                        (int) repository.findAll().stream()  // FIXED: cast to int
+                                .filter(export -> export.destinationCountry().equals(entry.getKey()))
+                                .count()
                 ))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Search exports by multiple criteria
-     */
     public List<ExportData> searchExports(SearchCriteria criteria) {
         log.debug("Searching exports with criteria: {}", criteria);
 
@@ -306,31 +253,29 @@ public class ExportDataService {
                         return false;
                     }
                     if (criteria.destination() != null &&
-                            !export.destination().equals(criteria.destination())) {
+                            !export.destinationCountry().equals(criteria.destination())) {
                         return false;
                     }
                     if (criteria.minPrice() != null &&
-                            export.pricePerUnit() < criteria.minPrice()) {
+                            export.pricePerTon() < criteria.minPrice()) {
                         return false;
                     }
                     if (criteria.maxPrice() != null &&
-                            export.pricePerUnit() > criteria.maxPrice()) {
+                            export.pricePerTon() > criteria.maxPrice()) {
                         return false;
                     }
                     if (criteria.fromDate() != null &&
-                            export.exportDate().isBefore(criteria.fromDate())) {
+                            export.date().isBefore(criteria.fromDate())) {
                         return false;
                     }
                     if (criteria.toDate() != null &&
-                            export.exportDate().isAfter(criteria.toDate())) {
+                            export.date().isAfter(criteria.toDate())) {
                         return false;
                     }
                     return true;
                 })
                 .collect(Collectors.toList());
     }
-
-    // Records for results and summaries
 
     public record BulkImportResult(
             int totalRecords,
@@ -340,14 +285,6 @@ public class ExportDataService {
     ) {
         public double getSuccessRate() {
             return totalRecords > 0 ? (successCount * 100.0 / totalRecords) : 0.0;
-        }
-
-        @Override
-        public String toString() {
-            return String.format(
-                    "Bulk Import: %d total, %d success (%.1f%%), %d failures",
-                    totalRecords, successCount, getSuccessRate(), failureCount
-            );
         }
     }
 
@@ -359,11 +296,11 @@ public class ExportDataService {
             double maxPrice,
             double totalQuantity,
             double totalValue,
-            Map<Country, Long> destinationDistribution
+            Map<String, Long> destinationDistribution
     ) {}
 
     public record DestinationStatistics(
-            Country destination,
+            String destination,
             int exportCount,
             double averagePrice,
             double totalValue,
@@ -377,14 +314,14 @@ public class ExportDataService {
     ) {}
 
     public record DestinationValueSummary(
-            Country destination,
+            String destination,
             double totalValue,
             int exportCount
     ) {}
 
     public record SearchCriteria(
             ProductType productType,
-            Country destination,
+            String destination,
             Double minPrice,
             Double maxPrice,
             LocalDate fromDate,

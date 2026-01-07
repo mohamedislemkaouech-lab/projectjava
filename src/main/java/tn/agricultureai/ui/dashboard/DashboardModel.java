@@ -6,12 +6,6 @@ import tn.agricultureai.service.prediction.PredictionService;
 import tn.agricultureai.service.report.ReportGenerator;
 import java.util.*;
 
-/**
- * Dashboard model - holds data and state.
- * Demonstrates: MVC Model, data management.
- *
- * @author Your Name
- */
 public class DashboardModel {
 
     private final ExportDataRepository exportRepository;
@@ -37,8 +31,6 @@ public class DashboardModel {
         this.reportRepository = reportRepository;
         this.currentPredictions = new ArrayList<>();
     }
-
-    // Getters and Setters
 
     public ExportDataRepository getExportRepository() {
         return exportRepository;
@@ -104,16 +96,14 @@ public class DashboardModel {
         this.selectedCountry = country;
     }
 
-    /**
-     * Get statistics summary
-     */
     public DashboardStatistics getStatistics() {
         long totalExports = exportRepository.count();
         long totalPredictions = predictionRepository.count();
         long totalReports = reportRepository.count();
 
+        // FIXED LINE 116: pricePerUnit to pricePerTon
         double avgExportPrice = exportRepository.findAll().stream()
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)
                 .average()
                 .orElse(0.0);
 
@@ -131,9 +121,6 @@ public class DashboardModel {
         );
     }
 
-    /**
-     * Record for dashboard statistics
-     */
     public record DashboardStatistics(
             long totalExports,
             long totalPredictions,

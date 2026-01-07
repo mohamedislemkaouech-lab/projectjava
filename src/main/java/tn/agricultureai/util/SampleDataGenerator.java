@@ -1,4 +1,3 @@
-// File: src/main/java/tn/isg/economics/util/SampleDataGenerator.java
 package tn.agricultureai.util;
 
 import tn.agricultureai.domain.model.*;
@@ -34,15 +33,7 @@ public class SampleDataGenerator {
     }
 
     private static double getBasePrice(ProductType product) {
-        switch (product) {
-            case OLIVE_OIL: return 3200.0;
-            case DATES: return 2200.0;
-            case CITRUS_FRUITS: return 1500.0;
-            case WHEAT: return 800.0;
-            case TOMATOES: return 1200.0;
-            case PEPPERS: return 1800.0;
-            default: return 1000.0;
-        }
+        return product.getAveragePrice();
     }
 
     private static double getBaseVolume(ProductType product) {

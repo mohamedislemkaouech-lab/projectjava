@@ -7,28 +7,17 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Predicate;
 
-/**
- * Validator for export data and predictions.
- * Demonstrates: Validation logic, functional interfaces, business rules.
- *
- * @author Your Name
- */
 @Slf4j
 public class DataValidator {
 
-    // Validation constants
     private static final double MIN_PRICE = 0.01;
     private static final double MAX_PRICE = 1000.0;
     private static final double MIN_QUANTITY = 0.01;
     private static final double MAX_QUANTITY = 10000.0;
     private static final int MAX_DATE_FUTURE_DAYS = 0;
     private static final int MAX_DATE_PAST_YEARS = 10;
-    private static final double PRICE_DEVIATION_THRESHOLD = 0.5; // 50%
+    private static final double PRICE_DEVIATION_THRESHOLD = 0.5;
 
-    /**
-     * Validate export data
-     * @throws DataValidationException if validation fails
-     */
     public void validate(ExportData data) {
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
@@ -41,32 +30,23 @@ public class DataValidator {
             ));
         }
 
-        // Validate destination
-        if (data.destination() == null) {
+        // Validate destination - use destinationCountry()
+        if (data.destinationCountry() == null || data.destinationCountry().isBlank()) {
             errors.add(new DataValidationException.ValidationError(
-                    "destination",
+                    "destinationCountry",
                     "Destination country is required",
-                    null
+                    data.destinationCountry()
             ));
         }
 
-        // Validate price
-        validatePrice(data.pricePerUnit(), errors);
+        // Validate price - use pricePerTon()
+        validatePrice(data.pricePerTon(), errors);
 
-        // Validate quantity
-        validateQuantity(data.quantity(), errors);
+        // Validate quantity - use volume()
+        validateQuantity(data.volume(), errors);
 
-        // Validate date
-        validateExportDate(data.exportDate(), errors);
-
-        // Validate source
-        if (data.source() == null || data.source().isBlank()) {
-            errors.add(new DataValidationException.ValidationError(
-                    "source",
-                    "Data source must be specified",
-                    data.source()
-            ));
-        }
+        // Validate date - use date()
+        validateExportDate(data.date(), errors);
 
         // Business rule: Check price reasonability for product type
         if (data.productType() != null && errors.isEmpty()) {
@@ -82,42 +62,36 @@ public class DataValidator {
         log.debug("Validation successful for export data");
     }
 
-    /**
-     * Validate price field
-     */
-    private void validatePrice(double pricePerUnit, List<DataValidationException.ValidationError> errors) {
-        if (pricePerUnit < MIN_PRICE) {
+    private void validatePrice(double pricePerTon, List<DataValidationException.ValidationError> errors) {
+        if (pricePerTon < MIN_PRICE) {
             errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit",
-                    String.format("Price must be at least %.2f EUR/kg", MIN_PRICE),
-                    pricePerUnit
+                    "pricePerTon",
+                    String.format("Price must be at least %.2f TND/kg", MIN_PRICE),
+                    pricePerTon
             ));
         }
 
-        if (pricePerUnit > MAX_PRICE) {
+        if (pricePerTon > MAX_PRICE) {
             errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit",
-                    String.format("Price cannot exceed %.2f EUR/kg", MAX_PRICE),
-                    pricePerUnit
+                    "pricePerTon",
+                    String.format("Price cannot exceed %.2f TND/kg", MAX_PRICE),
+                    pricePerTon
             ));
         }
 
-        if (Double.isNaN(pricePerUnit) || Double.isInfinite(pricePerUnit)) {
+        if (Double.isNaN(pricePerTon) || Double.isInfinite(pricePerTon)) {
             errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit",
+                    "pricePerTon",
                     "Price must be a valid number",
-                    pricePerUnit
+                    pricePerTon
             ));
         }
     }
 
-    /**
-     * Validate quantity field
-     */
     private void validateQuantity(double quantity, List<DataValidationException.ValidationError> errors) {
         if (quantity < MIN_QUANTITY) {
             errors.add(new DataValidationException.ValidationError(
-                    "quantity",
+                    "volume",
                     String.format("Quantity must be at least %.2f tons", MIN_QUANTITY),
                     quantity
             ));
@@ -125,7 +99,7 @@ public class DataValidator {
 
         if (quantity > MAX_QUANTITY) {
             errors.add(new DataValidationException.ValidationError(
-                    "quantity",
+                    "volume",
                     String.format("Quantity cannot exceed %.2f tons", MAX_QUANTITY),
                     quantity
             ));
@@ -133,20 +107,17 @@ public class DataValidator {
 
         if (Double.isNaN(quantity) || Double.isInfinite(quantity)) {
             errors.add(new DataValidationException.ValidationError(
-                    "quantity",
+                    "volume",
                     "Quantity must be a valid number",
                     quantity
             ));
         }
     }
 
-    /**
-     * Validate export date
-     */
     private void validateExportDate(LocalDate exportDate, List<DataValidationException.ValidationError> errors) {
         if (exportDate == null) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate",
+                    "date",
                     "Export date is required",
                     null
             ));
@@ -159,7 +130,7 @@ public class DataValidator {
 
         if (exportDate.isAfter(maxFuture)) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate",
+                    "date",
                     "Export date cannot be in the future",
                     exportDate
             ));
@@ -167,45 +138,29 @@ public class DataValidator {
 
         if (exportDate.isBefore(maxPast)) {
             errors.add(new DataValidationException.ValidationError(
-                    "exportDate",
+                    "date",
                     String.format("Export date cannot be older than %d years", MAX_DATE_PAST_YEARS),
                     exportDate
             ));
         }
     }
 
-    /**
-     * Validate price reasonability for product type
-     */
     private void validatePriceReasonability(
             ExportData data,
             List<DataValidationException.ValidationError> errors
     ) {
         double avgPrice = data.productType().getAveragePrice();
-        double deviation = Math.abs(data.pricePerUnit() - avgPrice) / avgPrice;
+        double deviation = Math.abs(data.pricePerTon() - avgPrice) / avgPrice;
 
         if (deviation > PRICE_DEVIATION_THRESHOLD) {
             log.warn("Price {} for {} deviates significantly ({:.1f}%) from average {}",
-                    data.pricePerUnit(),
+                    data.pricePerTon(),
                     data.productType(),
                     deviation * 100,
                     avgPrice);
-
-            // Add warning but don't fail validation
-            // You can uncomment to make it a hard error:
-            /*
-            errors.add(new DataValidationException.ValidationError(
-                    "pricePerUnit",
-                    String.format("Price deviates too much from average (%.2f EUR/kg)", avgPrice),
-                    data.pricePerUnit()
-            ));
-            */
         }
     }
 
-    /**
-     * Validate multiple records
-     */
     public void validateBatch(List<ExportData> dataList) {
         List<DataValidationException.ValidationError> allErrors = new ArrayList<>();
 
@@ -213,7 +168,6 @@ public class DataValidator {
             try {
                 validate(dataList.get(i));
             } catch (DataValidationException e) {
-                // Add errors with record index
                 for (var error : e.getValidationErrors()) {
                     allErrors.add(new DataValidationException.ValidationError(
                             "record[" + i + "]." + error.field(),
@@ -229,9 +183,6 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Check if data passes a custom validation rule
-     */
     public boolean validateCustomRule(ExportData data, Predicate<ExportData> rule) {
         try {
             return rule.test(data);
@@ -241,13 +192,9 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Validate prediction result
-     */
     public void validatePrediction(PredictionResult prediction) {
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
-        // Validate product type
         if (prediction.productType() == null) {
             errors.add(new DataValidationException.ValidationError(
                     "productType",
@@ -256,7 +203,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate destination
         if (prediction.destination() == null) {
             errors.add(new DataValidationException.ValidationError(
                     "destination",
@@ -265,7 +211,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate predicted price
         if (prediction.predictedPrice() <= 0) {
             errors.add(new DataValidationException.ValidationError(
                     "predictedPrice",
@@ -277,12 +222,11 @@ public class DataValidator {
         if (prediction.predictedPrice() > MAX_PRICE) {
             errors.add(new DataValidationException.ValidationError(
                     "predictedPrice",
-                    String.format("Predicted price cannot exceed %.2f EUR/kg", MAX_PRICE),
+                    String.format("Predicted price cannot exceed %.2f TND/kg", MAX_PRICE),
                     prediction.predictedPrice()
             ));
         }
 
-        // Validate confidence score
         if (prediction.confidenceScore() < 0.0 || prediction.confidenceScore() > 1.0) {
             errors.add(new DataValidationException.ValidationError(
                     "confidenceScore",
@@ -291,7 +235,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate model name
         if (prediction.modelName() == null || prediction.modelName().isBlank()) {
             errors.add(new DataValidationException.ValidationError(
                     "modelName",
@@ -300,19 +243,14 @@ public class DataValidator {
             ));
         }
 
-        // Throw if errors found
         if (!errors.isEmpty()) {
             throw new DataValidationException(errors);
         }
     }
 
-    /**
-     * Validate market report
-     */
     public void validateReport(MarketReport report) {
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
-        // Validate title
         if (report.title() == null || report.title().isBlank()) {
             errors.add(new DataValidationException.ValidationError(
                     "title",
@@ -321,7 +259,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate content
         if (report.content() == null || report.content().isBlank()) {
             errors.add(new DataValidationException.ValidationError(
                     "content",
@@ -330,7 +267,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate content length (minimum)
         if (report.content() != null && report.content().length() < 50) {
             errors.add(new DataValidationException.ValidationError(
                     "content",
@@ -339,7 +275,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate report type
         if (report.reportType() == null) {
             errors.add(new DataValidationException.ValidationError(
                     "reportType",
@@ -348,7 +283,6 @@ public class DataValidator {
             ));
         }
 
-        // Validate predictions list
         if (report.predictions() == null) {
             errors.add(new DataValidationException.ValidationError(
                     "predictions",
@@ -357,15 +291,11 @@ public class DataValidator {
             ));
         }
 
-        // Throw if errors found
         if (!errors.isEmpty()) {
             throw new DataValidationException(errors);
         }
     }
 
-    /**
-     * Quick validation - returns boolean instead of throwing
-     */
     public boolean isValid(ExportData data) {
         try {
             validate(data);
@@ -375,9 +305,6 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Quick validation for prediction
-     */
     public boolean isValidPrediction(PredictionResult prediction) {
         try {
             validatePrediction(prediction);
@@ -387,9 +314,6 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Get validation errors without throwing
-     */
     public List<String> getValidationErrors(ExportData data) {
         try {
             validate(data);
@@ -401,17 +325,12 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Validate with custom business rules
-     */
     public void validateWithRules(
             ExportData data,
             List<ValidationRule> customRules
     ) {
-        // First, run standard validation
         validate(data);
 
-        // Then apply custom rules
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
 
         for (ValidationRule rule : customRules) {
@@ -429,9 +348,6 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Functional interface for custom validation rules
-     */
     @FunctionalInterface
     public interface ValidationRule {
         boolean test(ExportData data);
@@ -449,44 +365,38 @@ public class DataValidator {
         }
     }
 
-    /**
-     * Pre-defined validation rules
-     */
     public static class ValidationRules {
-
-        /**
-         * Rule: EU exports must be above minimum price
-         */
         public static ValidationRule euMinimumPrice(double minPrice) {
             return new ValidationRule() {
                 @Override
                 public boolean test(ExportData data) {
-                    if (!data.isEuExport()) {
-                        return true; // Rule doesn't apply
+                    String country = data.destinationCountry();
+                    boolean isEU = country.equals("France") || country.equals("Germany") ||
+                            country.equals("Italy") || country.equals("Spain") ||
+                            country.equals("United Kingdom");
+                    if (!isEU) {
+                        return true;
                     }
-                    return data.pricePerUnit() >= minPrice;
+                    return data.pricePerTon() >= minPrice;
                 }
 
                 @Override
                 public String fieldName() {
-                    return "pricePerUnit";
+                    return "pricePerTon";
                 }
 
                 @Override
                 public String errorMessage() {
-                    return String.format("EU exports must have price >= %.2f EUR/kg", minPrice);
+                    return String.format("EU exports must have price >= %.2f TND/kg", minPrice);
                 }
 
                 @Override
                 public Object extractValue(ExportData data) {
-                    return data.pricePerUnit();
+                    return data.pricePerTon();
                 }
             };
         }
 
-        /**
-         * Rule: High-value products must have minimum quantity
-         */
         public static ValidationRule highValueMinimumQuantity(double minQuantity) {
             return new ValidationRule() {
                 @Override
@@ -494,12 +404,12 @@ public class DataValidator {
                     if (!data.productType().isHighValue()) {
                         return true;
                     }
-                    return data.quantity() >= minQuantity;
+                    return data.volume() >= minQuantity;
                 }
 
                 @Override
                 public String fieldName() {
-                    return "quantity";
+                    return "volume";
                 }
 
                 @Override
@@ -509,25 +419,22 @@ public class DataValidator {
 
                 @Override
                 public Object extractValue(ExportData data) {
-                    return data.quantity();
+                    return data.volume();
                 }
             };
         }
 
-        /**
-         * Rule: Recent exports only (within last N days)
-         */
         public static ValidationRule recentExportsOnly(int maxDaysOld) {
             return new ValidationRule() {
                 @Override
                 public boolean test(ExportData data) {
                     LocalDate cutoff = LocalDate.now().minusDays(maxDaysOld);
-                    return !data.exportDate().isBefore(cutoff);
+                    return !data.date().isBefore(cutoff);
                 }
 
                 @Override
                 public String fieldName() {
-                    return "exportDate";
+                    return "date";
                 }
 
                 @Override
@@ -537,7 +444,7 @@ public class DataValidator {
 
                 @Override
                 public Object extractValue(ExportData data) {
-                    return data.exportDate();
+                    return data.date();
                 }
             };
         }

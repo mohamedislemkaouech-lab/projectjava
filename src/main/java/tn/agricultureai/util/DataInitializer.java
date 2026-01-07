@@ -6,47 +6,38 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * Utility class to generate sample data for testing.
- * Demonstrates: Data generation, repository usage, randomization.
- *
- * @author Your Name
- */
 public final class DataInitializer {
 
-    private static final Random RANDOM = new Random(42); // Fixed seed for reproducibility
+    private static final Random RANDOM = new Random(42);
 
     private DataInitializer() {
         throw new UnsupportedOperationException("Utility class");
     }
 
-    /**
-     * Initialize export data repository with sample data
-     */
     public static void initializeExportData(ExportDataRepository repository) {
         List<ExportData> exports = new ArrayList<>();
 
-        // Generate data for last 90 days
         LocalDate startDate = LocalDate.now().minusDays(90);
 
         for (int i = 0; i < 100; i++) {
             ProductType product = randomProductType();
-            Country destination = randomCountry();
+            String country = randomCountry().getName();  // Get country name string
             LocalDate exportDate = startDate.plusDays(RANDOM.nextInt(90));
 
             double basePrice = product.getAveragePrice();
-            double variation = 0.8 + (RANDOM.nextDouble() * 0.4); // ±20%
+            double variation = 0.8 + (RANDOM.nextDouble() * 0.4);
             double price = basePrice * variation;
 
-            double quantity = 5 + (RANDOM.nextDouble() * 50); // 5-55 tons
+            double quantity = 5 + (RANDOM.nextDouble() * 50);
 
+            // FIXED LINE 44: Correct constructor parameter order
             ExportData export = new ExportData(
-                    product,
-                    destination,
-                    quantity,
-                    price,
-                    exportDate,
-                    randomSource()
+                    exportDate,      // LocalDate date
+                    product,         // ProductType productType
+                    price,           // double pricePerTon
+                    quantity,        // double volume
+                    country,         // String destinationCountry
+                    randomMarketIndicator()  // MarketIndicator indicator
             );
 
             exports.add(export);
@@ -56,20 +47,21 @@ public final class DataInitializer {
         System.out.println("✅ Initialized " + exports.size() + " export records");
     }
 
-    /**
-     * Initialize prediction repository with sample data
-     */
     public static void initializePredictions(PredictionRepository repository) {
         List<PredictionResult> predictions = new ArrayList<>();
 
-        // Generate predictions for all product-country combinations
         for (ProductType product : ProductType.values()) {
-            for (Country country : Arrays.copyOf(Country.values(), 5)) { // First 5 countries
+            // Get first 5 countries
+            Country[] countries = Country.values();
+            int limit = Math.min(5, countries.length);
+
+            for (int j = 0; j < limit; j++) {
+                Country country = countries[j];
                 double basePrice = product.getAveragePrice();
-                double variation = 0.85 + (RANDOM.nextDouble() * 0.3); // ±15%
+                double variation = 0.85 + (RANDOM.nextDouble() * 0.3);
                 double predictedPrice = basePrice * variation;
 
-                double confidence = 0.6 + (RANDOM.nextDouble() * 0.35); // 0.6-0.95
+                double confidence = 0.6 + (RANDOM.nextDouble() * 0.35);
 
                 PredictionResult prediction = new PredictionResult(
                         product,
@@ -90,9 +82,6 @@ public final class DataInitializer {
         System.out.println("✅ Initialized " + predictions.size() + " predictions");
     }
 
-    /**
-     * Initialize report repository with sample data
-     */
     public static void initializeReports(ReportRepository repository) {
         List<MarketReport> reports = new ArrayList<>();
 
@@ -104,7 +93,6 @@ public final class DataInitializer {
             String title = generateReportTitle(type);
             String content = generateReportContent(type);
 
-            // Create some sample predictions for the report
             List<PredictionResult> predictions = new ArrayList<>();
             int predCount = 2 + RANDOM.nextInt(5);
 
@@ -131,9 +119,6 @@ public final class DataInitializer {
         System.out.println("✅ Initialized " + reports.size() + " reports");
     }
 
-    /**
-     * Initialize all repositories with sample data
-     */
     public static void initializeAllData(
             ExportDataRepository exportRepo,
             PredictionRepository predictionRepo,
@@ -147,7 +132,6 @@ public final class DataInitializer {
     }
 
     // Helper methods
-
     private static ProductType randomProductType() {
         ProductType[] types = ProductType.values();
         return types[RANDOM.nextInt(types.length)];
@@ -158,9 +142,9 @@ public final class DataInitializer {
         return countries[RANDOM.nextInt(countries.length)];
     }
 
-    private static String randomSource() {
-        String[] sources = {"Customs", "Ministry of Agriculture", "Trade Office", "Port Authority"};
-        return sources[RANDOM.nextInt(sources.length)];
+    private static MarketIndicator randomMarketIndicator() {
+        MarketIndicator[] indicators = MarketIndicator.values();
+        return indicators[RANDOM.nextInt(indicators.length)];
     }
 
     private static String randomModel() {
@@ -186,7 +170,7 @@ public final class DataInitializer {
                             "Olive oil maintains strong demand from European markets.";
             case WEEKLY_ANALYSIS ->
                     "This week saw a 3% increase in date exports to Middle Eastern markets. " +
-                            "Citrus prices remain competitive due to favorable weather conditions.";
+                            "Citrus fruits prices remain competitive due to favorable weather conditions.";
             case PRODUCT_FOCUS ->
                     "Analysis of " + randomProductType().getDisplayName() + " exports reveals " +
                             "strong performance in Q4. Market conditions are favorable for expansion.";

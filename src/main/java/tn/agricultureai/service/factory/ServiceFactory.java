@@ -16,7 +16,7 @@ public class ServiceFactory {
 
     // Singleton instances
     private static SamplePredictionService simplePredictionService;
-    private static DL4JPredictionService dl4jPredictionService; // REAL AI MODEL
+    private static DJLPredictionService DJLPredictionService; // REAL AI MODEL
     private static PredictionService djlPredictionService;
     private static ReportGenerator reportGenerator;
 
@@ -62,13 +62,13 @@ public class ServiceFactory {
      * Get REAL AI MODEL - DeepLearning4J Neural Network
      * THIS IS THE ACTUAL WORKING AI MODEL!
      */
-    public static synchronized DL4JPredictionService getDL4JPredictionService() {
-        if (dl4jPredictionService == null) {
+    public static synchronized DJLPredictionService getDL4JPredictionService() {
+        if (DJLPredictionService == null) {
             log.info("🤖 Creating REAL AI Model (DeepLearning4J Neural Network)...");
-            dl4jPredictionService = new DL4JPredictionService();
+            DJLPredictionService = new DJLPredictionService();
             log.info("✅ REAL AI Model loaded and trained successfully!");
         }
-        return dl4jPredictionService;
+        return DJLPredictionService;
     }
 
     /**
@@ -123,7 +123,7 @@ public class ServiceFactory {
 
         return (PredictionService) switch (type) {
             case SIMPLE -> new SamplePredictionService();
-            case DL4J -> new DL4JPredictionService(); // REAL AI
+            case DL4J -> new DJLPredictionService(); // REAL AI
             case DJL -> new DJLPredictionService();
             case ONNX -> new SamplePredictionService();
         };

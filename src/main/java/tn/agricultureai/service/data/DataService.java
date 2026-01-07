@@ -9,12 +9,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Service for data operations and analytics.
- * Demonstrates: Service layer, business logic, data processing.
- *
- * @author Your Name
- */
 @Slf4j
 @RequiredArgsConstructor
 public class DataService {
@@ -22,27 +16,17 @@ public class DataService {
     private final ExportDataRepository repository;
     private final DataValidator validator;
 
-    /**
-     * Add new export data with validation
-     */
     public ExportData addExportData(ExportData data) {
         log.info("Adding export data: {} to {}",
-                data.productType(), data.destination());
+                data.productType(), data.destinationCountry());
 
-        // Validate data
         validator.validate(data);
-
-        // Save to repository
         return repository.save(data);
     }
 
-    /**
-     * Add multiple export records
-     */
     public List<ExportData> addBulkExportData(List<ExportData> dataList) {
         log.info("Adding {} export records in bulk", dataList.size());
 
-        // Validate all records
         List<DataValidationException.ValidationError> errors = new ArrayList<>();
         for (int i = 0; i < dataList.size(); i++) {
             try {
@@ -56,13 +40,9 @@ public class DataService {
             throw new DataValidationException(errors);
         }
 
-        // Save all
         return repository.saveAll(dataList);
     }
 
-    /**
-     * Get export statistics for a product
-     */
     public ProductStatistics getProductStatistics(ProductType productType) {
         List<ExportData> exports = repository.findByProductType(productType);
 
@@ -73,20 +53,21 @@ public class DataService {
         }
 
         DoubleSummaryStatistics priceStats = exports.stream()
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)  // FIXED: pricePerTon not pricePerUnit
                 .summaryStatistics();
 
         double totalQuantity = exports.stream()
-                .mapToDouble(ExportData::quantity)
+                .mapToDouble(ExportData::volume)  // FIXED: volume not quantity
                 .sum();
 
         double totalValue = exports.stream()
                 .mapToDouble(ExportData::getTotalValue)
                 .sum();
 
-        Map<Country, Long> destinationDistribution = exports.stream()
+        // FIXED LINE 88: Map String (country name) not Country enum
+        Map<String, Long> destinationDistribution = exports.stream()
                 .collect(Collectors.groupingBy(
-                        ExportData::destination,
+                        ExportData::destinationCountry,
                         Collectors.counting()
                 ));
 
@@ -102,9 +83,6 @@ public class DataService {
         );
     }
 
-    /**
-     * Get market share by product
-     */
     public Map<ProductType, Double> getMarketShare() {
         Map<ProductType, Double> totalValues = repository.getTotalValueByProduct();
         double grandTotal = totalValues.values().stream()
@@ -122,9 +100,6 @@ public class DataService {
                 ));
     }
 
-    /**
-     * Get trend analysis for a product
-     */
     public TrendAnalysis analyzeTrend(
             ProductType productType,
             int periodDays
@@ -134,7 +109,7 @@ public class DataService {
         List<ExportData> exports = repository.findByDateRange(cutoffDate, LocalDate.now())
                 .stream()
                 .filter(e -> e.productType().equals(productType))
-                .sorted(Comparator.comparing(ExportData::exportDate))
+                .sorted(Comparator.comparing(ExportData::date))  // FIXED: date() not exportDate()
                 .toList();
 
         if (exports.size() < 2) {
@@ -143,21 +118,20 @@ public class DataService {
             );
         }
 
-        // Calculate trend (simple linear regression slope)
         double avgPrice = exports.stream()
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)  // FIXED: pricePerTon not pricePerUnit
                 .average()
                 .orElse(0.0);
 
         double firstHalfAvg = exports.stream()
                 .limit(exports.size() / 2)
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)  // FIXED: pricePerTon not pricePerUnit
                 .average()
                 .orElse(0.0);
 
         double secondHalfAvg = exports.stream()
                 .skip(exports.size() / 2)
-                .mapToDouble(ExportData::pricePerUnit)
+                .mapToDouble(ExportData::pricePerTon)  // FIXED: pricePerTon not pricePerUnit
                 .average()
                 .orElse(0.0);
 
@@ -175,9 +149,6 @@ public class DataService {
         return new TrendAnalysis(productType, direction, changePercent, exports.size());
     }
 
-    /**
-     * Compare two products
-     */
     public ProductComparison compareProducts(
             ProductType product1,
             ProductType product2
@@ -193,9 +164,6 @@ public class DataService {
         );
     }
 
-    /**
-     * Records for statistics
-     */
     public record ProductStatistics(
             ProductType productType,
             int exportCount,
@@ -204,7 +172,7 @@ public class DataService {
             double maxPrice,
             double totalQuantity,
             double totalValue,
-            Map<Country, Long> destinationDistribution
+            Map<String, Long> destinationDistribution  // FIXED: String not Country
     ) {}
 
     public enum TrendDirection {

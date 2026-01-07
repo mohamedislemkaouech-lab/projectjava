@@ -1,87 +1,45 @@
 package tn.agricultureai.domain.model;
 
-/**
- * Enum representing export destination countries.
- * Demonstrates: Enum with nested enum, grouping logic.
- */
 public enum Country {
-    // European Union
-    FRANCE("France", "FR", Region.EU),
-    ITALY("Italy", "IT", Region.EU),
-    SPAIN("Spain", "ES", Region.EU),
-    GERMANY("Germany", "DE", Region.EU),
-
-    // North Africa & Middle East
-    LIBYA("Libya", "LY", Region.MENA),
-    ALGERIA("Algeria", "DZ", Region.MENA),
-    SAUDI_ARABIA("Saudi Arabia", "SA", Region.MENA),
-    UAE("United Arab Emirates", "AE", Region.MENA),
-
-    // Other
-    USA("United States", "US", Region.AMERICAS),
-    CANADA("Canada", "CA", Region.AMERICAS);
+    FRANCE("France", Region.EU, "FR"),
+    GERMANY("Germany", Region.EU, "DE"),
+    ITALY("Italy", Region.EU, "IT"),
+    SPAIN("Spain", Region.EU, "ES"),
+    UK("United Kingdom", Region.EU, "UK"),
+    USA("United States", Region.AMERICAS, "US"),
+    CHINA("China", Region.ASIA, "CN"),
+    JAPAN("Japan", Region.ASIA, "JP"),
+    UAE("United Arab Emirates", Region.MIDDLE_EAST, "AE"),
+    SAUDI_ARABIA("Saudi Arabia", Region.MIDDLE_EAST, "SA"),
+    TUNISIA("Tunisia", Region.AFRICA, "TN"),
+    LIBYA("Libya", Region.AFRICA, "LY"),
+    ALGERIA("Algeria", Region.AFRICA, "DZ"),
+    MOROCCO("Morocco", Region.AFRICA, "MA"),
+    EGYPT("Egypt", Region.AFRICA, "EG");
 
     private final String name;
-    private final String isoCode;
     private final Region region;
+    private final String isoCode;
 
-    Country(String name, String isoCode, Region region) {
+    Country(String name, Region region, String isoCode) {
         this.name = name;
-        this.isoCode = isoCode;
         this.region = region;
+        this.isoCode = isoCode;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getIsoCode() {
-        return isoCode;
-    }
-
     public Region getRegion() {
         return region;
     }
 
-    /**
-     * Nested enum for geographical regions
-     */
+    public String getIsoCode() {
+        return isoCode;
+    }
+
     public enum Region {
-        EU("European Union"),
-        MENA("Middle East & North Africa"),
-        AMERICAS("Americas"),
-        ASIA("Asia");
-
-        private final String displayName;
-
-        Region(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
-
-    /**
-     * Find country by ISO code
-     *
-     * @param isoCode Two-letter country code
-     * @return Country or null
-     */
-    public static Country fromIsoCode(String isoCode) {
-        if (isoCode == null) return null;
-
-        for (Country country : values()) {
-            if (country.isoCode.equalsIgnoreCase(isoCode)) {
-                return country;
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public String toString() {
-        return name + " (" + isoCode + ")";
+        EU, AMERICAS, ASIA, MIDDLE_EAST, AFRICA
     }
 }

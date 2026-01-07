@@ -4,19 +4,10 @@ import tn.agricultureai.domain.model.*;
 import tn.agricultureai.ui.chart.ChartStrategy;
 import java.util.*;
 
-/**
- * Dashboard view - displays information to user.
- * Demonstrates: MVC View, presentation logic.
- *
- * @author Your Name
- */
 public class DashboardView {
 
     private ChartStrategy chartStrategy;
 
-    /**
-     * Display main menu
-     */
     public void displayMainMenu() {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("  🌾 TUNISIAN AGRICULTURAL EXPORT INTELLIGENCE DASHBOARD 🌾");
@@ -33,9 +24,6 @@ public class DashboardView {
         System.out.print("Enter your choice: ");
     }
 
-    /**
-     * Display statistics
-     */
     public void displayStatistics(DashboardModel.DashboardStatistics stats) {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("  📊 DASHBOARD STATISTICS");
@@ -49,9 +37,6 @@ public class DashboardView {
         System.out.println("=".repeat(70));
     }
 
-    /**
-     * Display predictions
-     */
     public void displayPredictions(List<PredictionResult> predictions) {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("  🔮 PRICE PREDICTIONS");
@@ -75,9 +60,7 @@ public class DashboardView {
         System.out.println("=".repeat(70));
     }
 
-    /**
-     * Display export data
-     */
+    // FIXED LINES 94-98
     public void displayExports(List<ExportData> exports, int limit) {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("  📦 EXPORT DATA");
@@ -90,12 +73,13 @@ public class DashboardView {
             exports.stream()
                     .limit(limit)
                     .forEach(export -> {
+                        // USING ALIAS METHODS from ExportData.java
                         System.out.printf("  %s | %-15s → %-15s | %.1f tons @ %.2f EUR/kg%n",
-                                export.exportDate(),
+                                export.exportDate(),           // alias for date()
                                 export.productType().getDisplayName(),
-                                export.destination().getName(),
-                                export.quantity(),
-                                export.pricePerUnit()
+                                export.destination(),          // alias for destinationCountry()
+                                export.quantity(),             // alias for volume()
+                                export.pricePerUnit()          // alias for pricePerTon()
                         );
                     });
 
@@ -107,9 +91,6 @@ public class DashboardView {
         System.out.println("=".repeat(70));
     }
 
-    /**
-     * Display market report
-     */
     public void displayReport(MarketReport report) {
         if (report == null) {
             System.out.println("\n  No report available.");
@@ -129,9 +110,6 @@ public class DashboardView {
         System.out.println("\n" + "=".repeat(70));
     }
 
-    /**
-     * Display chart using strategy
-     */
     public void displayChart(String title, Map<String, Double> data) {
         if (chartStrategy != null) {
             chartStrategy.render(title, data);
@@ -140,16 +118,10 @@ public class DashboardView {
         }
     }
 
-    /**
-     * Set chart strategy
-     */
     public void setChartStrategy(ChartStrategy strategy) {
         this.chartStrategy = strategy;
     }
 
-    /**
-     * Display product selection menu
-     */
     public void displayProductMenu() {
         System.out.println("\n📦 SELECT PRODUCT:");
         ProductType[] products = ProductType.values();
@@ -159,9 +131,6 @@ public class DashboardView {
         System.out.print("\nEnter choice: ");
     }
 
-    /**
-     * Display country selection menu
-     */
     public void displayCountryMenu() {
         System.out.println("\n🌍 SELECT COUNTRY:");
         Country[] countries = Country.values();
@@ -171,9 +140,6 @@ public class DashboardView {
         System.out.print("\nEnter choice: ");
     }
 
-    /**
-     * Display chart type selection menu
-     */
     public void displayChartTypeMenu() {
         System.out.println("\n📊 SELECT CHART TYPE:");
         System.out.println("  1. Bar Chart");
@@ -182,30 +148,18 @@ public class DashboardView {
         System.out.print("\nEnter choice: ");
     }
 
-    /**
-     * Display success message
-     */
     public void displaySuccess(String message) {
         System.out.println("\n✅ " + message);
     }
 
-    /**
-     * Display error message
-     */
     public void displayError(String message) {
         System.out.println("\n❌ Error: " + message);
     }
 
-    /**
-     * Display info message
-     */
     public void displayInfo(String message) {
         System.out.println("\nℹ️  " + message);
     }
 
-    /**
-     * Pause for user input
-     */
     public void pause() {
         System.out.print("\nPress Enter to continue...");
         try {

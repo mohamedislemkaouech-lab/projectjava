@@ -3,36 +3,28 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>tn.agricultureai</groupId>
     <artifactId>tunisian-export-ai</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
-
-    <name>Tunisian Agricultural Export Intelligence System</name>
-    <description>OOP Exam Project - AI-Powered Market Prediction System</description>
 
     <properties>
-        <!-- Updated for Java 25 -->
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Dependency Versions -->
-        <lombok.version>1.18.34</lombok.version>
-        <djl.version>0.28.0</djl.version>
-        <langchain4j.version>0.35.0</langchain4j.version>
-        <onnxruntime.version>1.18.0</onnxruntime.version>
-        <slf4j.version>2.0.9</slf4j.version>
-        <deeplearning4j.version>1.0.0-M2.1</deeplearning4j.version>
-        <nd4j.version>1.0.0-M2.1</nd4j.version>
-        <junit.version>5.10.1</junit.version>
+        <!-- UPDATED for Java 25 compatibility -->
+        <lombok.version>1.18.42</lombok.version>
+        <djl.version>0.28.0</djl.version>  <!-- Latest DJL supports Java 25 -->
+        <langchain4j.version>0.35.0</langchain4j.version>  <!-- Latest -->
+        <slf4j.version>2.0.13</slf4j.version>
+        <jackson.version>2.17.1</jackson.version>
+        <junit.version>5.10.2</junit.version>
     </properties>
 
     <dependencies>
-        <!-- Lombok -->
+        <!-- 1. Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -40,56 +32,27 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- DeepLearning4J -->
-        <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-core</artifactId>
-            <version>${deeplearning4j.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>ch.qos.logback</groupId>
-                    <artifactId>logback-classic</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <!-- ND4J -->
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-native-platform</artifactId>
-            <version>${nd4j.version}</version>
-        </dependency>
-
-        <!-- DJL -->
+        <!-- 2. DJL with PyTorch backend (works with Java 25) -->
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>
             <version>${djl.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
-            <groupId>ai.djl</groupId>
-            <artifactId>basicdataset</artifactId>
+            <groupId>ai.djl.pytorch</groupId>
+            <artifactId>pytorch-engine</artifactId>
             <version>${djl.version}</version>
+            <scope>runtime</scope>
         </dependency>
-
-        <!-- ONNX Runtime -->
         <dependency>
-            <groupId>com.microsoft.onnxruntime</groupId>
-            <artifactId>onnxruntime</artifactId>
-            <version>${onnxruntime.version}</version>
+            <groupId>ai.djl.pytorch</groupId>
+            <artifactId>pytorch-native-cu121</artifactId>
+            <version>2.1.1</version>
+            <classifier>linux-x86_64</classifier>  <!-- Change for your OS -->
+            <scope>runtime</scope>
         </dependency>
 
-        <!-- LangChain4j -->
+        <!-- 3. LangChain4j (latest for Java 25) -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
@@ -100,13 +63,15 @@
             <artifactId>langchain4j-ollama</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
+
+        <!-- 4. Jackson -->
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai</artifactId>
-            <version>${langchain4j.version}</version>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
 
-        <!-- Logging -->
+        <!-- 5. Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -118,14 +83,7 @@
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- Apache Commons Math -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math3</artifactId>
-            <version>3.6.1</version>
-        </dependency>
-
-        <!-- JUnit -->
+        <!-- 6. Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -136,60 +94,31 @@
 
     <build>
         <plugins>
-            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.12.1</version>  <!-- Latest for Java 25 -->
                 <configuration>
                     <source>25</source>
                     <target>25</target>
-                    <encoding>UTF-8</encoding>
+                    <!-- REQUIRED for Java 25 with reflection -->
                     <compilerArgs>
-                        <!-- Open modules if some libraries fail due to internal APIs -->
                         <arg>--add-opens</arg>
-                        <arg>java.base/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>java.base/java.lang=ALL-UNNAMED</arg>
+                        <arg>--add-opens</arg>
+                        <arg>java.base/java.util=ALL-UNNAMED</arg>
+                        <arg>--add-opens</arg>
+                        <arg>java.base/java.io=ALL-UNNAMED</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
-            </plugin>
-
-            <!-- Exec Plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <mainClass>tn.agricultureai.Main</mainClass>
-                </configuration>
-            </plugin>
-
-            <!-- Jar Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>tn.agricultureai.Main</mainClass>
-                            <addClasspath>true</addClasspath>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-
-            <!-- Surefire Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
             </plugin>
         </plugins>
     </build>
